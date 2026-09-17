@@ -41,4 +41,5 @@ class ComercioController extends Controller
 
         return view('comercios.show', compact('comercio'));
     }
+
 }

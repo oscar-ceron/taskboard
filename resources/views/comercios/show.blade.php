@@ -16,11 +16,10 @@
 
     <h2>Transacciones</h2>
 
-    @forelse ($comercio->transacciones as $transaccion)
-        <div class="card">
-            <strong>${{ number_format($transaccion->monto, 2) }}</strong>
-            — {{ $transaccion->cliente_nombre }}
-            <x-badge-estado :estado="$transaccion->estado" />
+    @forelse ($comercio->transacciones as $t)
+        <div class="transaccion">
+            <strong>${{ $t->monto }}</strong> {{ $t->cliente_nombre }}
+            <x-badge-estado :estado="$t->estado" />
         </div>
     @empty
         <p>Sin transacciones</p>
