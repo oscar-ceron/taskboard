@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Comercio;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 
 class ComercioController extends Controller
 {
@@ -16,9 +17,15 @@ class ComercioController extends Controller
      * disparar una consulta extra por cada comercio dentro de la vista,
      * trae el conteo ya resuelto en la consulta principal.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $comercios = Comercio::withCount('transacciones')
+        $comercios = Comercio::when($request->buscar,
+            fn($q) => $q->where(
+                'nombre_comercio',
+                'like',
+                "%{$request->buscar}%"
+            )
+        )->withCount('transacciones')
             ->orderBy('nombre_comercio')
             ->get();
 
