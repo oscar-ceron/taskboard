@@ -8,6 +8,11 @@
 <p><a href="{{ route('comercios.index') }}">&larr; Volver a comercios</a></p>
 
 <h1>{{ $comercio->nombre_comercio }}</h1>
+
+<a href="{{ route('transacciones.create', $comercio) }}">
+    + Nueva transacción
+</a>
+
 <p class="meta">
     Rubro: {{ $comercio->rubro }}
     &middot;

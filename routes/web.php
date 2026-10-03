@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ComercioController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TransaccionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,3 +31,10 @@ Route::get('/practica/formulario-demo', function () {
 Route::post('/practica/enviar', function () {
 return 'Formulario recibido correctamente.';
 });
+
+Route::get('/comercios/{comercio}/transacciones/nueva',
+    [TransaccionController::class, 'create']
+)->name('transacciones.create');
+Route::post('/transacciones',
+    [TransaccionController::class, 'store']
+)->name('transacciones.store');
