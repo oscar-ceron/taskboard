@@ -19,6 +19,7 @@ class ComercioController extends Controller
     public function index(): View
     {
         $comercios = Comercio::withCount('transacciones')
+            ->orderByDesc('transacciones_count')
             ->orderBy('nombre_comercio')
             ->get();
 
