@@ -17,6 +17,19 @@ class TransaccionController extends Controller
 
     public function store(Request $request)
     {
+        $request->validate([
+            'comercio_id' => 'required|exists:comercios,id',
+            'cliente_nombre' => 'required|string|max:255|min:3',
+            'monto' => 'required|numeric|min:0.01|max:10000',
+        ], [
+            'cliente_nombre.required' => 'Debes indicar el nombre del cliente.',
+            'cliente_nombre.min' => 'El nombre del cliente es demasiado corto.',
+            'monto.required' => 'Debes indicar un monto.',
+            'monto.numeric' => 'El monto debe ser un número.',
+            'monto.min' => 'El monto debe ser mayor a cero.',
+            'monto.max' => 'El monto es demasiado alto.',
+        ]);
+
         $transaccion = Transaccion::create($request->only([
             'comercio_id',
             'cliente_nombre',

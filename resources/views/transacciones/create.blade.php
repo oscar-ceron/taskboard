@@ -8,9 +8,19 @@
     @csrf
     <input type="hidden" name="comercio_id" value="{{ $comercio->id }}">
     <label for="cliente">Cliente</label>
-    <input id="cliente" name="cliente_nombre" type="text"><br>
+    <input id="cliente" name="cliente_nombre" type="text"
+        value="{{ old('cliente_nombre') }}">
+    @error('cliente_nombre')
+    <span class="error">{{ $message }}</span>
+    @enderror
+    <br>
     <label for="monto">Monto</label>
-    <input id="monto" name="monto" type="number" step="0.01"><br>
+    <input id="monto" name="monto" type="number" step="0.01"
+        value="{{ old('monto') }}">
+    @error('monto')
+    <span class="error">{{ $message }}</span>
+    @enderror
+    <br>
     <button type="submit">Registrar</button>
 </form>
 @endsection
