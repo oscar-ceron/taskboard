@@ -12,4 +12,9 @@ class User extends Authenticatable
     {
         return ['password' => 'hashed'];
     }
+
+    public function comercios()
+    {
+        return $this->hasMany(Comercio::class);
+    }
 }

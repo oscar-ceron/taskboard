@@ -5,37 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Comercio;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ComercioController extends Controller
 {
-    /**
-     * Semana 5 · Routing y Controladores
-     * GET /comercios
-     *
-     * Lista todos los comercios afiliados junto con el conteo de sus
-     * transacciones. withCount() evita el problema N+1: en vez de
-     * disparar una consulta extra por cada comercio dentro de la vista,
-     * trae el conteo ya resuelto en la consulta principal.
-     */
-    public function index(Request $request): View
-    {
-        $comercios = Comercio::when($request->buscar,
-                fn($q) => $q->where(
-                    'nombre_comercio',
-                    'like',
-                    "%{$request->buscar}%"
-                )
-            )->when($request->rubro,
-                fn($q) => $q->where(
-                    'rubro',
-                    'like',
-                    "%{$request->rubro}%"
-                )
-            )
-            ->withCount('transacciones')
-            ->orderByDesc('transacciones_count')
-            ->orderBy('nombre_comercio')
-            ->get();
+
+    public function index() : View
+    {            
+        $comercios = Auth::user() 
+        ->comercios() 
+        ->withCount('transacciones') 
+        ->orderBy('nombre_comercio') 
+        ->get(); 
 
         return view('comercios.index', compact('comercios'));
     }
@@ -52,6 +33,8 @@ class ComercioController extends Controller
      */
     public function show(Comercio $comercio): View
     {
+        abort_unless($comercio->user_id === Auth::id(), 404);
+
         $comercio->load('transacciones');
 
         return view('comercios.show', compact('comercio'));

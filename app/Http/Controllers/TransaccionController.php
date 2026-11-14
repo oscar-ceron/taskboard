@@ -6,13 +6,19 @@ use App\Models\Comercio;
 use App\Models\Transaccion;
 use Illuminate\View\View;
 use App\Http\Requests\GuardarTransaccionRequest;
-
+use Illuminate\Support\Facades\Auth;
 
 class TransaccionController extends Controller
 {
+    private function autorizar(Transaccion $t):void
+    {
+        abort_unless($t->comercio->user_id === Auth::id(), 404);
+    }
+
     public function create(Comercio $comercio): View
     {
-        return view('transacciones.create', compact('comercio'));
+        $comercios = Auth::user()->comercios()->orderBy('nombre_comercio')->get();
+        return view('transacciones.create', compact('comercio', 'comercios'));// compact('comercio');
     }
 
     public function store(GuardarTransaccionRequest $request)
@@ -29,17 +35,16 @@ class TransaccionController extends Controller
 
     public function edit(Transaccion $transaccion)
     {
+        $this->autorizar($transaccion);
         $comercios = Comercio::orderBy('nombre_comercio')->get();
-        return view(
-            'transacciones.edit',
-            compact('transaccion', 'comercios')
-        );
+        return view('transacciones.edit',compact('transaccion', 'comercios'));
     }
 
     public function update(
         GuardarTransaccionRequest $request,
         Transaccion $transaccion
     ) {
+        $this->autorizar($transaccion);
         $transaccion->update($request->validated());
         return redirect()
             ->route('comercios.show', $transaccion->comercio_id)
@@ -48,6 +53,7 @@ class TransaccionController extends Controller
 
     public function destroy(Transaccion $transaccion)
     {
+        $this->autorizar($transaccion);
         $comercioId = $transaccion->comercio_id;
         $clienteNombre = $transaccion->cliente_nombre;
         if ($transaccion->estado === 'Completada') {
@@ -64,6 +70,7 @@ class TransaccionController extends Controller
 
     public function moverEstado(Transaccion $transaccion, string $estado)
     {
+        $this->autorizar($transaccion);
         $transiciones = [
             'Iniciada' => ['Completada', 'Fallida'],
             'Completada' => [],

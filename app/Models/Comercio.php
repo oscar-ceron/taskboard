@@ -10,20 +10,17 @@ class Comercio extends Model
 {
     use HasFactory;
 
-    /**
-     * Semana 6 · Eloquent ORM
-     * Campos que se pueden asignar de forma masiva (create()/update()).
-     */
     protected $fillable = [
+        'user_id',
         'nombre_comercio',
         'rubro',
-        'telefono',
     ];
 
-    /**
-     * Un Comercio tiene muchas Transacciones.
-     * Analogía: la cocina (Eloquent) sabe que "un comercio pidió muchos platillos".
-     */
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function transacciones(): HasMany
     {
         return $this->hasMany(Transaccion::class);
