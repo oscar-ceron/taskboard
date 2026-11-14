@@ -1,227 +1,196 @@
-# TaskBoard — Pasarela de Pagos
-### Integración de Sistemas · UPED · Ciclo 02-2026
-**Docente:** Ing. Oscar Armando Contreras · **Avance:** Semanas 5 a 7 — Unidad II completa
+# TaskBoard
 
----
+TaskBoard es una aplicación web para administrar comercios afiliados a una pasarela de pagos y las transacciones asociadas a cada comercio. Los usuarios se registran e inician sesión; cada cuenta trabaja con sus propios comercios.
 
-## 1. ¿Qué es esto?
+## Funcionalidades
 
-Este paquete contiene **todo el código fuente** del proyecto TaskBoard construido en clase entre la Semana 5 y la Semana 7:
+- Registro, inicio y cierre de sesión.
+- Listado de comercios del usuario autenticado y vista de su actividad.
+- Registro, edición y eliminación de transacciones.
+- Validación de datos y restricción de acceso a recursos de otros usuarios en las rutas web autenticadas.
+- API REST JSON de comercios y transacciones; actualmente sus rutas no requieren autenticación.
+- Cambio de estado de las transacciones:
+  - `Iniciada` puede pasar a `Completada` o `Fallida`.
+  - `Fallida` puede volver a `Iniciada`.
+  - `Completada` es un estado final y no se puede eliminar.
+- Componentes Blade para mostrar el estado de cada transacción y la actividad de un comercio.
 
-| Semana | Tema | Qué aporta a este paquete |
-|---|---|---|
-| 5 | Routing y Controladores | `routes/web.php`, `ComercioController.php` |
-| 6 | Eloquent ORM | Migraciones, modelos `Comercio`, `Transaccion`, `EventoTransaccion` |
-| 7 | Blade (layouts y componentes) | `layouts/app.blade.php`, `<x-badge-estado>`, `<x-badge-actividad>`, vistas de comercios |
+## Tecnologías
 
-**No incluye** el "core" de Laravel (carpeta `vendor/`, `bootstrap/`, `public/index.php`, etc.). Esto es intencional: instalarás primero un proyecto Laravel limpio y luego copiarás estos archivos encima, tal como se ha hecho semana a semana en clase.
+- PHP 8.3 o superior.
+- Laravel 13 (`laravel/framework` `^13.17`).
+- Composer 2.
+- Base de datos SQLite o MySQL/MariaDB.
+- Blade para las vistas.
 
-> 📌 **Importante — Semana 8 (jueves):** este proyecto es deliberadamente el punto de partida **sin** los ajustes de la sesión del jueves de la Semana 8. Ese día se trabaja en vivo, en pareja/equipo, usando la **Guía de Trabajo N.º 3** junto con este mismo código como base. Las actividades de esa guía (Detective de Bugs, Ruleta Blade, predicción de código) están pensadas para practicarse directamente sobre este proyecto, no sobre una versión ya resuelta.
+La interfaz principal tiene estilos en sus vistas Blade. Node.js y npm solo son necesarios si se trabaja con los recursos de Vite.
 
----
+## Instalación y configuración local
 
-## 2. Requisitos previos
+Ejecuta los comandos desde la raíz del proyecto.
 
-Instala esto **antes** de empezar (una sola vez en tu computadora):
+1. Instala las dependencias de PHP y crea `.env` si todavía no existe:
 
-| Herramienta | Versión mínima | Cómo verificar |
-|---|---|---|
-| PHP | 8.2 | `php -v` |
-| Composer | 2.x | `composer -V` |
-| MySQL (o MariaDB) | 8.x / 10.x | `mysql --version` |
-| Extensión PHP `pdo_mysql` | — | `php -m \| grep pdo_mysql` |
-
-> 💡 Si usas Laravel Herd, XAMPP, Laragon o WAMP, PHP, Composer y MySQL ya suelen venir incluidos.
-
----
-
-## 3. Paso a paso para levantar el proyecto
-
-### Paso 1 — Crear un proyecto Laravel limpio
-
-Abre una terminal en la carpeta donde quieras guardar tus proyectos y ejecuta:
-
-```bash
-composer create-project laravel/laravel taskboard
-cd taskboard
-```
-
-Esto descarga un Laravel nuevo y funcional dentro de la carpeta `taskboard/`.
-
-> **Nota sobre `bootstrap/app.php`:** no necesitas tocar nada dentro de la carpeta `bootstrap/`. En Laravel 11+, ese archivo ya viene configurado de fábrica para leer las rutas desde `routes/web.php`:
-> ```php
-> ->withRouting(
->     web: __DIR__.'/../routes/web.php',
->     commands: __DIR__.'/../routes/console.php',
->     health: '/up',
-> )
-> ```
-> Como en el Paso 2 solo **reemplazas el contenido** de `routes/web.php` (sin cambiar su nombre ni ubicación), `bootstrap/app.php` sigue apuntando correctamente sin que tengas que editarlo.
-
-### Paso 2 — Copiar los archivos de este paquete
-
-Copia el contenido de `taskboard-source/` **encima** de tu proyecto `taskboard/`, respetando las rutas (sobrescribe `routes/web.php` y `database/seeders/DatabaseSeeder.php` cuando te lo pida).
-
-```bash
-# Ejemplo en Linux/Mac, ejecutado UN NIVEL ARRIBA de ambas carpetas:
-cp -r taskboard-source/app/Models/*        taskboard/app/Models/
-cp -r taskboard-source/app/Http/Controllers/* taskboard/app/Http/Controllers/
-cp -r taskboard-source/database/migrations/*  taskboard/database/migrations/
-cp -r taskboard-source/database/seeders/*     taskboard/database/seeders/
-cp    taskboard-source/routes/web.php         taskboard/routes/web.php
-cp -r taskboard-source/resources/views/*      taskboard/resources/views/
-```
-
-En Windows (PowerShell), usa `Copy-Item -Recurse` en lugar de `cp -r`. Si prefieres hacerlo a mano: crea cada carpeta/archivo indicado y pega el contenido correspondiente (son solo 13 archivos, ver el árbol en la sección 6).
-
-### Paso 3 — Configurar la base de datos
-
-1. Crea la base de datos en MySQL:
-   ```sql
-   CREATE DATABASE taskboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```powershell
+   composer install
+   if (!(Test-Path .env)) { Copy-Item .env.example .env }
+   php artisan key:generate
    ```
-2. Abre el archivo `.env` (en la raíz de `taskboard/`) y ajusta estas líneas:
+
+2. Configura la conexión a la base de datos en `.env`.
+
+   El archivo `.env.example` usa SQLite. Si eliges SQLite, verifica que exista `database/database.sqlite`; en PowerShell puedes crearlo si falta:
+
+   ```powershell
+   if (!(Test-Path database\database.sqlite)) {
+       New-Item -ItemType File database\database.sqlite | Out-Null
+   }
+   ```
+
+   Para MySQL/MariaDB, crea primero una base de datos y configura `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD` en `.env`.
+
+3. Configura el almacenamiento de sesiones:
+
    ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=taskboard
-   DB_USERNAME=root
-   DB_PASSWORD=
+   SESSION_DRIVER=file
    ```
-   (usa tu propio usuario/contraseña de MySQL si no es `root` sin contraseña).
 
-### Paso 4 — Migrar y sembrar datos de ejemplo
+   El `.env.example` del proyecto trae `SESSION_DRIVER=database`, pero no hay una migración para la tabla `sessions`. El driver `file` almacena las sesiones en `storage/framework/sessions` y evita que Laravel intente consultar esa tabla. Si cambiaste `.env` después de almacenar la configuración en caché, ejecuta:
 
-Desde la carpeta `taskboard/`:
+   ```powershell
+   php artisan config:clear
+   ```
 
-```bash
-php artisan migrate
-php artisan db:seed
-```
+4. Crea las tablas y los datos de demostración:
 
-Esto crea las tablas `comercios`, `transacciones` y `eventos_transaccion`, y las llena con los datos de ejemplo usados en todas las guías de clase:
+   ```powershell
+   php artisan migrate --seed
+   ```
 
-- **Café Amanecer** (Restaurante) — 2 transacciones: `$45.00 María López — Completada` y `$12.50 Juan Pérez — Iniciada`.
-- **Ferretería El Tornillo** (Ferretería) — 0 transacciones (para probar el caso `@empty`).
-- **Pupusería Doña Marta** (Restaurante) — 1 transacción `Fallida`, como variedad extra.
+   El seeder crea dos cuentas de demostración y un comercio para cada una:
 
-> Si prefieres hacerlo en un solo paso: `php artisan migrate:fresh --seed`.
+   | Usuario | Correo | Contraseña local |
+   |---|---|---|
+   | Ana López | `ana@taskboard.test` | `password123` |
+   | Carlos Pérez | `carlos@taskboard.test` | `password123` |
 
-### Paso 5 — Levantar el servidor
+   Estas credenciales son únicamente para desarrollo local. No uses datos ni contraseñas de demostración en producción. El seeder actual no crea transacciones.
 
-```bash
-php artisan serve
-```
+5. Inicia el servidor:
 
-Verás algo como `Server running on [http://127.0.0.1:8000]`.
+   ```powershell
+   php artisan serve
+   ```
 
-### Paso 6 — Probar en el navegador
+   Abre `http://127.0.0.1:8000`. Sin iniciar sesión, las rutas protegidas redirigen a `/login`.
 
-| URL | Qué deberías ver |
-|---|---|
-| `http://127.0.0.1:8000/` | Redirige automáticamente a `/comercios`. |
-| `http://127.0.0.1:8000/comercios` | Listado de los 3 comercios, cada uno con su badge Activo/Sin actividad. |
-| `http://127.0.0.1:8000/comercios/1` | Panel de Café Amanecer con sus 2 transacciones y sus badges de estado. |
-| `http://127.0.0.1:8000/comercios/2` | Panel de Ferretería El Tornillo con el mensaje "Sin transacciones" (caso `@empty`). |
+> **Cuidado:** `php artisan migrate:fresh --seed` elimina todas las tablas y los datos existentes antes de volver a crearlos.
 
----
+## Rutas principales
 
-## 4. Checklist de verificación
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| `GET` | `/registro` | Invitado | Formulario de registro |
+| `POST` | `/registro` | Invitado | Crea una cuenta e inicia sesión |
+| `GET` | `/login` | Invitado | Formulario de acceso |
+| `POST` | `/login` | Invitado | Inicia sesión; limitado a 5 intentos por minuto |
+| `POST` | `/logout` | Autenticado | Cierra la sesión |
+| `GET` | `/` | Autenticado | Redirige al listado de comercios |
+| `GET` | `/comercios` | Autenticado | Lista los comercios del usuario |
+| `GET` | `/comercios/{comercio}` | Autenticado | Muestra un comercio y sus transacciones |
+| `GET` | `/comercios/{comercio}/transacciones/nueva` | Autenticado | Formulario para registrar una transacción |
+| `POST` | `/transacciones` | Autenticado | Registra una transacción |
+| `GET` | `/transacciones/{transaccion}/editar` | Autenticado | Formulario de edición |
+| `PUT` | `/transacciones/{transaccion}` | Autenticado | Actualiza una transacción |
+| `DELETE` | `/transacciones/{transaccion}` | Autenticado | Elimina una transacción no completada |
+| `PATCH` | `/transacciones/{transaccion}/mover/{estado}` | Autenticado | Cambia el estado según las transiciones permitidas |
 
-Marca cada punto antes de dar por buena la instalación:
+También hay rutas de demostración para un formulario en `/practica/formulario-demo` y `/practica/enviar`.
 
-- [ ] `php artisan serve` inicia sin errores.
-- [ ] `/comercios` muestra 3 comercios con el conteo correcto de transacciones.
-- [ ] Café Amanecer muestra la etiqueta **Activo** (verde); Ferretería El Tornillo muestra **Sin actividad** (gris).
-- [ ] `/comercios/1` muestra las 2 transacciones con sus badges de estado (✔ Completada, ⏳ Iniciada).
-- [ ] `/comercios/2` (Ferretería) muestra "Sin transacciones" en vez de una lista vacía o un error.
-- [ ] El layout (`<nav>` y `<footer>`) se ve igual en ambas páginas — prueba de que `@extends` funciona.
+## API REST
 
----
+Las rutas de API están definidas en `routes/api.php` y Laravel les agrega el prefijo `/api`. Las respuestas de comercios y transacciones usan API Resources, por lo que exponen una estructura JSON definida en vez de todas las columnas del modelo.
 
-## 5. Solución de problemas comunes
-
-| Situación | Causa probable | Solución |
+| Método | Ruta | Comportamiento |
 |---|---|---|
-| `SQLSTATE[HY000] [1049] Unknown database 'taskboard'` | No creaste la base de datos. | Ejecuta el `CREATE DATABASE` del Paso 3. |
-| `Undefined variable $comercio` | El controlador no envió esa variable a la vista. | Verifica `compact('comercio')` en `ComercioController@show`. |
-| `View [comercios.show] not found` | Archivo o carpeta mal nombrado. | El punto representa una barra: `comercios.show` = `comercios/show.blade.php`. |
-| `Component "badge-estado" not found` | El nombre del archivo no coincide con la etiqueta. | Debe llamarse en kebab-case: `badge-estado.blade.php` dentro de `resources/views/components/`. |
-| Página en blanco o error 404 en `/comercios/1` | El servidor no está corriendo o la migración no se ejecutó. | Repite `php artisan serve` y `php artisan migrate:fresh --seed`. |
-| `Class "App\Models\Comercio" not found` | Composer no ha regenerado el autoload. | Ejecuta `composer dump-autoload`. |
+| `GET` | `/api/comercios` | Lista comercios mediante `ComercioResource`; no incluye las transacciones en esta lista |
+| `GET` | `/api/comercios/{comercio}` | Devuelve un comercio y sus transacciones |
+| `GET` | `/api/transacciones` | Lista transacciones; admite el filtro opcional `?estado=Completada` |
+| `POST` | `/api/transacciones` | Crea una transacción y responde `201 Created` |
+| `GET` | `/api/transacciones/{transaccion}` | Devuelve una transacción; responde `404` si no existe |
+| `DELETE` | `/api/transacciones/{transaccion}` | Elimina una transacción y responde `204 No Content` |
+| `PUT`, `PATCH` | `/api/transacciones/{transaccion}` | La ruta está registrada, pero la acción `update()` todavía no está implementada |
 
----
+El filtro de `GET /api/transacciones` compara el parámetro `estado` con el estado guardado en cada transacción. Los estados de la aplicación son `Iniciada`, `Completada` y `Fallida`. Sin parámetro devuelve todas las transacciones; si el valor no tiene coincidencias, devuelve `200` con `"data": []`.
 
-## 6. Árbol de archivos de este paquete
+Ejemplo de creación:
 
-```
-taskboard-source/
-├── app/
-│   ├── Http/Controllers/
-│   │   └── ComercioController.php        (Semana 5)
-│   └── Models/
-│       ├── Comercio.php                  (Semana 6)
-│       ├── Transaccion.php               (Semana 6)
-│       └── EventoTransaccion.php         (Semana 6)
-├── database/
-│   ├── migrations/
-│   │   ├── 2024_06_01_000001_create_comercios_table.php
-│   │   ├── 2024_06_01_000002_create_transacciones_table.php
-│   │   └── 2024_06_01_000003_create_eventos_transaccion_table.php
-│   └── seeders/
-│       ├── DatabaseSeeder.php
-│       └── ComercioSeeder.php
-├── resources/views/
-│   ├── layouts/
-│   │   └── app.blade.php                 (Semana 7)
-│   ├── components/
-│   │   ├── badge-estado.blade.php        (Semana 7)
-│   │   └── badge-actividad.blade.php     (Semana 7)
-│   └── comercios/
-│       ├── index.blade.php               (Semana 7)
-│       └── show.blade.php                (Semana 7)
-├── routes/
-│   └── web.php                           (Semana 5)
-└── README.md                             (este archivo)
+```http
+POST http://127.0.0.1:8000/api/transacciones
+Accept: application/json
+Content-Type: application/json
+
+{
+  "comercio_id": 1,
+  "cliente_nombre": "Luis Mena",
+  "monto": 25.50
+}
 ```
 
----
+La validación requiere un comercio existente, un nombre de cliente y un monto positivo de hasta `10000`. El estado inicial se establece en `Iniciada` por el valor predeterminado de la base de datos. Aunque se envíe `estado` en el JSON, actualmente no se incluye en las reglas del Form Request y no se guarda desde esta petición.
 
-## 7. Modelo de datos (resumen)
+Para obtener errores de validación como `422 Unprocessable Content` en JSON, incluye `Accept: application/json`. `Content-Type: application/json` indica que el cuerpo de la petición está en JSON.
 
+> **Autenticación de la API:** Laravel Sanctum está instalado, pero las rutas de `routes/api.php` no tienen aplicado el middleware `auth:sanctum`. Actualmente cualquier cliente que alcance la API puede consultar los comercios y transacciones, crear transacciones o eliminar transacciones sin autenticarse. Úsala solo en el entorno de desarrollo hasta que se configure la autenticación por tokens.
+
+## Modelo de datos
+
+```text
+User 1 ──< Comercio 1 ──< Transaccion 1 ──< EventoTransaccion
 ```
-Comercio  1 ──< N  Transaccion  1 ──< N  EventoTransaccion
+
+- **User:** nombre, correo electrónico único y contraseña con hash.
+- **Comercio:** usuario propietario, nombre, rubro y teléfono opcional.
+- **Transaccion:** comercio, monto, nombre del cliente y estado (`Iniciada`, `Completada` o `Fallida`).
+- **EventoTransaccion:** tipo y detalle opcional asociado a una transacción. El modelo y la tabla están disponibles para la bitácora; los controladores actuales no crean eventos automáticamente.
+
+Las migraciones de estas tablas están en `database/migrations`. Las migraciones de `cache` y `jobs` son parte del esqueleto de Laravel.
+
+## Estructura del proyecto
+
+```text
+app/
+  Http/
+    Controllers/          Controladores web
+      Api/                 Endpoints REST de la API
+    Requests/              Validación de registro y transacciones
+    Resources/             Recursos JSON de comercios y transacciones
+  Models/                  User, Comercio, Transaccion y EventoTransaccion
+database/
+  migrations/             Esquema de la base de datos
+  seeders/                Datos de demostración
+resources/views/
+  auth/                   Formularios de registro e inicio de sesión
+  comercios/              Listado y detalle de comercios
+  transacciones/          Formularios de creación y edición
+  components/             Badges Blade
+  layouts/                Layout principal
+routes/web.php            Rutas web y middleware
+routes/api.php            Rutas REST con prefijo /api
 ```
 
-- **Comercio**: `nombre_comercio`, `rubro`, `telefono`.
-- **Transaccion**: `comercio_id`, `monto`, `cliente_nombre`, `estado` (`Iniciada` | `Completada` | `Fallida`).
-- **EventoTransaccion**: `transaccion_id`, `tipo_evento`, `detalle` — bitácora de auditoría, lista para usarse en semanas futuras.
+## Desarrollo
 
----
+- Ejecuta las pruebas automatizadas con `php artisan test`.
+- Lista las rutas web con `php artisan route:list` y las rutas API con `php artisan route:list --path=api`.
+- Para compilar los recursos de Vite, instala las dependencias de Node con `npm install` y ejecuta `npm run build`.
 
-## 8. Cómo se usa este proyecto en la Semana 8 (jueves)
+## Solución de problemas
 
-Este código es el **punto de partida** de la sesión de repaso integrador. Ese día, junto con la **Guía de Trabajo N.º 3 — Semana 8**, los estudiantes:
-
-1. Levantan este mismo proyecto (Pasos 1 a 6 de esta guía).
-2. Usan el diagrama de flujo y las autoevaluaciones de la guía para explicar, sobre este código real, cómo viaja una petición (`Route → Controlador → Eloquent → Blade`).
-3. Resuelven en vivo la dinámica **"Detective de Bugs"**: el docente proyecta una variante con un error intencional (no incluida en este paquete) y la clase la diagnostica.
-4. Predicen el output de un fragmento de `comercios/index.blade.php` con `<x-badge-actividad>` **antes** de verlo renderizado en este proyecto.
-5. Participan en la **Ruleta Blade** apoyándose en el código real como referencia.
-
-De esta forma, el jueves se vive como **práctica genuina de integración**, no como la simple entrega de un ejercicio ya resuelto.
-
----
-
-## 9. Próximos pasos (Semana 9 en adelante)
-
-Este proyecto queda listo como base para continuar con:
-
-- Formularios (`GET`/`POST`) y protección CSRF para registrar nuevas transacciones.
-- Validación de datos de entrada (`$request->validate()`).
-- CRUD completo de comercios y transacciones.
-
----
-
-Integración de Sistemas · UPED · Ciclo 02-2026
+| Error o síntoma | Causa probable | Qué revisar |
+|---|---|---|
+| `Table '...sessions' doesn't exist` | `SESSION_DRIVER=database` y no existe la tabla `sessions`. | Configura `SESSION_DRIVER=file` o agrega y ejecuta una migración para la tabla de sesiones. |
+| `Unknown database` o error de conexión | La base configurada en `.env` no existe o las credenciales no coinciden. | Revisa la configuración `DB_*` y que el servicio de base de datos esté activo. |
+| `No application encryption key has been specified` | Falta generar la clave de la aplicación. | Ejecuta `php artisan key:generate`. |
+| Los cambios de `.env` no se reflejan | Laravel está usando configuración en caché. | Ejecuta `php artisan config:clear`. |
+| Un invitado es enviado a `/login` | Las rutas principales requieren autenticación. | Registra una cuenta o inicia sesión. |
