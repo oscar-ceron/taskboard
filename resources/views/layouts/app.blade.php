@@ -135,6 +135,22 @@
 </head>
 
 <body>
+    <nav class="barra"> 
+        <a href="{{ route('comercios.index') }}">TaskBoard</a> 
+        
+        @auth 
+            <span>Hola, {{ Auth::user()->name }}</span> 
+            <form method="POST" action="{{ route('logout') }}" style="display:inline"> 
+            @csrf 
+            <button type="submit">Salir</button> 
+            </form> 
+        @endauth 
+        
+        @guest 
+            <a href="{{ route('login') }}">Entrar</a> 
+            <a href="{{ route('registro') }}">Registrarse</a> 
+        @endguest 
+    </nav> 
     <nav>
         <a href="{{ route('comercios.index') }}">Pasarela de Pagos · TaskBoard</a>
         <span class="tag">UPED · Integración de Sistemas</span>
