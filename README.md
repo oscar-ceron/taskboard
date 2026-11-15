@@ -8,7 +8,8 @@ TaskBoard es una aplicación web para administrar comercios afiliados a una pasa
 - Listado de comercios del usuario autenticado y vista de su actividad.
 - Registro, edición y eliminación de transacciones.
 - Validación de datos y restricción de acceso a recursos de otros usuarios en las rutas web autenticadas.
-- API REST JSON de comercios y transacciones; actualmente sus rutas no requieren autenticación.
+- API REST JSON protegida con tokens Bearer de Laravel Sanctum.
+- Consulta y revocación de los tokens del usuario autenticado.
 - Cambio de estado de las transacciones:
   - `Iniciada` puede pasar a `Completada` o `Fallida`.
   - `Fallida` puede volver a `Iniciada`.
@@ -19,6 +20,7 @@ TaskBoard es una aplicación web para administrar comercios afiliados a una pasa
 
 - PHP 8.3 o superior.
 - Laravel 13 (`laravel/framework` `^13.17`).
+- Laravel Sanctum para autenticación de la API.
 - Composer 2.
 - Base de datos SQLite o MySQL/MariaDB.
 - Blade para las vistas.
@@ -109,19 +111,48 @@ También hay rutas de demostración para un formulario en `/practica/formulario-
 
 ## API REST
 
-Las rutas de API están definidas en `routes/api.php` y Laravel les agrega el prefijo `/api`. Las respuestas de comercios y transacciones usan API Resources, por lo que exponen una estructura JSON definida en vez de todas las columnas del modelo.
+Las rutas de API están definidas en `routes/api.php` y Laravel les agrega el prefijo `/api`. El endpoint de inicio de sesión emite tokens Bearer con Sanctum; las demás rutas están protegidas con `auth:sanctum` y requieren autenticación. Sin un token válido responden `401 Unauthorized`.
+
+### Obtener y usar un token
+
+Envía las credenciales y un nombre de dispositivo a `POST /api/login`:
+
+```http
+POST http://127.0.0.1:8000/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "ana@taskboard.test",
+  "password": "password123",
+  "dispositivo": "Postman en mi PC"
+}
+```
+
+La respuesta `201 Created` contiene el token en texto plano una sola vez. En Postman, copia su valor en **Authorization → Bearer Token** para las siguientes peticiones. No guardes el token real en la colección que compartirás o subirás al repositorio. El inicio de sesión está limitado a 5 intentos por minuto.
 
 | Método | Ruta | Comportamiento |
 |---|---|---|
-| `GET` | `/api/comercios` | Lista comercios mediante `ComercioResource`; no incluye las transacciones en esta lista |
-| `GET` | `/api/comercios/{comercio}` | Devuelve un comercio y sus transacciones |
-| `GET` | `/api/transacciones` | Lista transacciones; admite el filtro opcional `?estado=Completada` |
-| `POST` | `/api/transacciones` | Crea una transacción y responde `201 Created` |
-| `GET` | `/api/transacciones/{transaccion}` | Devuelve una transacción; responde `404` si no existe |
-| `DELETE` | `/api/transacciones/{transaccion}` | Elimina una transacción y responde `204 No Content` |
+| `POST` | `/api/login` | Público; valida credenciales y `dispositivo`, y emite un token (`201 Created`) |
+| `GET` | `/api/yo` | Devuelve los datos básicos del usuario autenticado |
+| `POST` | `/api/logout` | Revoca solo el token usado en la petición; responde `204 No Content` |
+| `GET` | `/api/tokens` | Lista los tokens propios con `id`, `name`, `last_used_at` y `created_at`; no devuelve el hash |
+| `DELETE` | `/api/tokens/{id}` | Revoca un token propio; responde `204`, o `404` si no pertenece al usuario |
+| `GET` | `/api/comercios` | Lista solo los comercios del usuario; no incluye las transacciones en esta lista |
+| `GET` | `/api/comercios/{comercio}` | Devuelve un comercio propio y sus transacciones; responde `404` si no le pertenece |
+| `GET` | `/api/transacciones` | Lista las transacciones del usuario; admite el filtro opcional `?estado=Completada` |
+| `POST` | `/api/transacciones` | Crea una transacción para un comercio propio y responde `201 Created` |
+| `GET` | `/api/transacciones/{transaccion}` | Devuelve una transacción propia; responde `404` si no existe o no le pertenece |
+| `DELETE` | `/api/transacciones/{transaccion}` | Elimina una transacción propia y responde `204 No Content` |
 | `PUT`, `PATCH` | `/api/transacciones/{transaccion}` | La ruta está registrada, pero la acción `update()` todavía no está implementada |
 
-El filtro de `GET /api/transacciones` compara el parámetro `estado` con el estado guardado en cada transacción. Los estados de la aplicación son `Iniciada`, `Completada` y `Fallida`. Sin parámetro devuelve todas las transacciones; si el valor no tiene coincidencias, devuelve `200` con `"data": []`.
+El filtro de `GET /api/transacciones` compara el parámetro `estado` con el estado guardado en las transacciones del usuario autenticado. Los estados de la aplicación son `Iniciada`, `Completada` y `Fallida`. Sin parámetro devuelve todas las transacciones propias; si el valor no tiene coincidencias, devuelve `200` con `"data": []`.
+
+### Colección de Postman
+
+La colección exportada de Postman está en [`postman/TaskBoard API.postman_collection.json`](./postman/TaskBoard%20API.postman_collection.json). Usa el formato Postman Collection v2.1 e incluye peticiones para listar comercios y transacciones, consultar detalles, filtrar por estado, crear transacciones válidas e inválidas y eliminar una transacción. Tras importar la colección, configura un Bearer Token válido para sus peticiones protegidas; el archivo compartido no debe contener tokens reales.
+
+Algunos ejemplos usan IDs fijos (`comercio_id: 1`, transacción `2` y eliminación de transacción `7`). Esos registros no están garantizados en una instalación limpia; comprueba que existan y, para DELETE, verifica cuidadosamente el ID antes de enviar la petición. El seeder actual crea comercios, pero no transacciones.
 
 Ejemplo de creación:
 
@@ -141,7 +172,7 @@ La validación requiere un comercio existente, un nombre de cliente y un monto p
 
 Para obtener errores de validación como `422 Unprocessable Content` en JSON, incluye `Accept: application/json`. `Content-Type: application/json` indica que el cuerpo de la petición está en JSON.
 
-> **Autenticación de la API:** Laravel Sanctum está instalado, pero las rutas de `routes/api.php` no tienen aplicado el middleware `auth:sanctum`. Actualmente cualquier cliente que alcance la API puede consultar los comercios y transacciones, crear transacciones o eliminar transacciones sin autenticarse. Úsala solo en el entorno de desarrollo hasta que se configure la autenticación por tokens.
+> **Tokens de dispositivo:** cada llamada válida a `/api/login` crea un token nuevo con el nombre enviado en `dispositivo`. `/api/tokens` muestra solo los metadatos permitidos del usuario autenticado. `last_used_at` puede ser `null` mientras el token no se haya usado en una ruta protegida. El cierre de sesión elimina el token de la petición actual; la revocación de otro dispositivo se hace con `DELETE /api/tokens/{id}` y solo dentro de la relación del usuario autenticado.
 
 ## Modelo de datos
 
@@ -153,6 +184,7 @@ User 1 ──< Comercio 1 ──< Transaccion 1 ──< EventoTransaccion
 - **Comercio:** usuario propietario, nombre, rubro y teléfono opcional.
 - **Transaccion:** comercio, monto, nombre del cliente y estado (`Iniciada`, `Completada` o `Fallida`).
 - **EventoTransaccion:** tipo y detalle opcional asociado a una transacción. El modelo y la tabla están disponibles para la bitácora; los controladores actuales no crean eventos automáticamente.
+- **Personal access token:** Sanctum guarda los hashes de los tokens en `personal_access_tokens`; la API no devuelve esa columna al listar dispositivos.
 
 Las migraciones de estas tablas están en `database/migrations`. Las migraciones de `cache` y `jobs` son parte del esqueleto de Laravel.
 

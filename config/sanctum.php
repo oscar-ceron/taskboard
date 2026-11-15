@@ -50,7 +50,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    //'expiration' => null,
+    'expiration' => 60 * 24, // 24 horas, en minutos
 
     /*
     |--------------------------------------------------------------------------

@@ -23,33 +23,12 @@ class GuardarTransaccionRequest extends FormRequest
      */
     public function rules(): array
     {
-        /*
-        // Se comentó esta parte ya que la petición POST de la API, 
-        //no funcionaba correctamente, debido a que el método `user()` 
-        // devuelve null, y por lo tanto la regla de validación `Rule::exists`
-        // no podía verificar si el comercio pertenece al usuario autenticado.
         return [
             'comercio_id' => ['required', 
                 Rule::exists('comercios', 'id')->where('user_id', $this->user()->id)],
             'cliente_nombre' => 'required|string|max:255|min:3',
             'monto' => 'required|numeric|min:0.01|max:10000',
         ];
-        */
-
-        //
-        $comercioRule = Rule::exists('comercios', 'id');
-        $usuario = $this->user();
-
-        if ($usuario !== null) {
-            $comercioRule->where('user_id', $usuario->id);
-        }
-
-        return [
-            'comercio_id' => ['required', $comercioRule],
-            'cliente_nombre' => 'required|string|max:255|min:3',
-            'monto' => 'required|numeric|min:0.01|max:10000',
-        ];
-        //
     }
 
     public function messages(): array

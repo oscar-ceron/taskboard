@@ -13,12 +13,22 @@ class TransaccionApiController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         $estado = request()->query('estado');
 
-        return TransaccionResource::collection( 
-        Transaccion::when($estado, fn ($q) => $q->where('estado', $estado))->latest()->get());
+         $transacciones = Transaccion::whereHas('comercio', fn ($q) => 
+            $q->where('user_id', $request->user()->id)) 
+            ->when($estado, fn ($q) => $q->where('estado', $estado)) 
+            ->latest() 
+            ->get(); 
+
+        return TransaccionResource::collection($transacciones);
+    }
+
+    private function autorizar(Transaccion $t): void
+    {
+        abort_unless($t->comercio->user_id === auth()->id, 404);
     }
 
     /**
@@ -38,6 +48,7 @@ class TransaccionApiController extends Controller
      */
     public function show(Transaccion $transaccion)
     {
+        $this->autorizar($transaccion);
         return new TransaccionResource($transaccion);
     }
 
@@ -46,7 +57,8 @@ class TransaccionApiController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $transaccion = Transaccion::findOrFail($id); 
+        $this->autorizar($transaccion); 
     }
 
     /**
@@ -54,6 +66,8 @@ class TransaccionApiController extends Controller
      */
     public function destroy(Transaccion $transaccion)
     {
+        $this->autorizar($transaccion);
+
         $transaccion->delete(); 
   
         return response()->noContent();   // 204 
